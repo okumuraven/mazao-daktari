@@ -6,6 +6,8 @@ Kenya track, targeting the **Click Mobile Mobile-First Impact Award**.
 A farmer photographs (or describes) a sick crop from their phone. The app
 diagnoses the likely pest/disease/deficiency and returns practical,
 locally-actionable treatment and prevention advice — in English or Swahili.
+Signing in with Google saves a farmer's diagnosis history; the diagnosis
+feature itself works fully anonymously too.
 
 ## Problem
 
@@ -28,25 +30,32 @@ treatment steps, and prevention tips — localized to English or Swahili.
 ┌─────────────────────┐        HTTPS/JSON        ┌──────────────────────────┐
 │  Next.js frontend    │ ────────────────────────▶│  Phoenix (Elixir) API    │
 │  (Vercel)             │◀──────────────────────── │  (Fly.io)                │
-│  - mobile-first form  │      diagnosis JSON       │  - POST /api/diagnose    │
-│  - EN/SW toggle       │                           │  - GET  /api/health      │
-└─────────────────────┘                           └────────────┬─────────────┘
-                                                                 │
-                                                    round-robin, │ cooldown on 429
-                                                                 ▼
-                                                   ┌──────────────────────────┐
-                                                   │  MazaoDaktari.AI.KeyRing │
-                                                   │  (GenServer)             │
-                                                   └────────────┬─────────────┘
-                                                                 │
-                                              ┌──────────────────┴──────────────────┐
-                                              ▼                                     ▼
-                                    Gemini (up to 6 keys)                  NVIDIA Build (1 key)
-                                    gemini-3.8-flash, multimodal           meta/llama-3.2-11b-vision-instruct
+│  - mobile-first form  │  diagnosis / auth JSON    │  - POST /api/diagnose    │
+│  - EN/SW toggle       │                           │  - POST /api/auth/google│
+│  - Google Sign-In     │                           │  - GET  /api/me         │
+└─────────────────────┘                           │  - GET  /api/diagnoses  │
+                                                    │  - GET  /api/health     │
+                                                    └──────┬────────────┬─────┘
+                                                            │            │
+                                                round-robin,│            │
+                                                cooldown 429│            ▼
+                                                            ▼      Postgres
+                                              ┌──────────────────────────┐   (users, diagnoses)
+                                              │  MazaoDaktari.AI.KeyRing │
+                                              │  (GenServer)             │
+                                              └────────────┬─────────────┘
+                                                            │
+                                         ┌──────────────────┴──────────────────┐
+                                         ▼                                     ▼
+                               Gemini (up to 6 keys)                  NVIDIA Build (1 key)
+                               gemini-3.8-flash, multimodal           meta/llama-3.2-11b-vision-instruct
 ```
 
-No database — the app is stateless; every request is diagnosed independently
-and nothing is persisted server-side.
+Google Sign-In (`MazaoDaktari.Accounts`) verifies the ID token the frontend
+gets from Google Identity Services against Google's `tokeninfo` endpoint,
+upserts a `users` row, and issues an opaque `Phoenix.Token` session token.
+Diagnosis history is only ever saved for a signed-in request — anonymous
+diagnoses are never persisted.
 
 ### Why a key rotation pool
 
@@ -70,10 +79,13 @@ See `backend/lib/mazao_daktari/ai/key_ring.ex` for the implementation and
 
 | Layer    | Choice                          | Why |
 |----------|----------------------------------|-----|
-| Frontend | Next.js (App Router) + Tailwind  | Mobile-first form + result view, deployed to Vercel |
+| Frontend | Next.js (App Router) + Tailwind  | Mobile-first + real desktop layout, deployed to Vercel |
 | Backend  | Phoenix (Elixir), API-only       | JSON API, deployed to Fly.io |
+| Database | Postgres + Ecto                  | Accounts + diagnosis history |
+| Auth     | Google Identity Services (frontend) + `tokeninfo` verification (backend) | No password path; `Phoenix.Token` for the app's own session |
 | AI       | Gemini (`gemini-3.8-flash`) + NVIDIA Build fallback | Multimodal (photo + text) diagnosis, key-rotated across free tiers |
 | HTTP client (backend) | `Req`                | Project convention (see `backend/AGENTS.md`) — not httpoison/tesla/httpc |
+| Icons    | `lucide-react`                   | SVG icons, no emoji |
 
 ## Repo layout
 
@@ -86,7 +98,25 @@ mazao-daktari/
 
 ## Local development
 
-**Backend** (see `backend/README.md` for full detail):
+### Docker (recommended — runs the whole stack in one command)
+
+```bash
+cp backend/.env.example backend/.env       # fill in at least GEMINI_API_KEYS
+docker compose up --build
+```
+
+This starts Postgres (`localhost:5433`), the Phoenix API (`localhost:4444`,
+runs `mix ecto.migrate` on boot), and the Next.js frontend
+(`localhost:3333`), all bind-mounted for live reload. See the root
+`docker-compose.yml` and each service's `Dockerfile` for the exact setup —
+the backend intentionally runs under `MIX_ENV=prod` even locally (see that
+Dockerfile's header comment for why), so `backend/config/prod.exs`'s CORS
+origin list already includes `http://localhost:3333`.
+
+### Without Docker
+
+**Backend** (needs a local Postgres — see `backend/README.md` for full
+detail):
 
 ```bash
 cd backend
@@ -134,9 +164,16 @@ npm run dev
 - **Data**: photos/descriptions are sent to the AI provider for inference
   only; nothing is persisted by this app (no database).
 
+## Live
+
+- Backend: https://mazao-daktari-api.fly.dev
+- Frontend: https://frontend-theta-nine-46.vercel.app
+
 ## Next steps
 
 - Lightweight feedback loop (farmer confirms/corrects the diagnosis) to
   build a small labeled dataset for future fine-tuning.
 - SMS/USSD fallback for farmers without smartphones.
-- Persist diagnosis history per farmer (would introduce the first database).
+- Set `GOOGLE_CLIENT_ID` (backend secret) and `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+  (Vercel env var) once the Google Cloud Console OAuth client is created —
+  Google Sign-In fails cleanly without it, everything else works.

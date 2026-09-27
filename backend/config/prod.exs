@@ -6,7 +6,7 @@ import Config
 # the frontend is deployed and its real domain is known.
 config :cors_plug,
   origin: [
-    "https://mazao-daktari.vercel.app",
+    "https://frontend-theta-nine-46.vercel.app",
     "http://localhost:3000",
     # frontend's docker-compose dev port (see root docker-compose.yml) -
     # this file is what the local Docker backend actually compiles under
