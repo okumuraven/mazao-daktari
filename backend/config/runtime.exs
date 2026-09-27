@@ -32,6 +32,13 @@ config :mazao_daktari,
   gemini_model: System.get_env("GEMINI_MODEL", "gemini-3.8-flash"),
   nvidia_model: System.get_env("NVIDIA_MODEL", "meta/llama-3.2-11b-vision-instruct")
 
+# Google Sign-In: the OAuth Web Client ID from Google Cloud Console. Used as
+# the expected `aud` claim when verifying a frontend ID token (see
+# MazaoDaktari.Accounts.GoogleAuth) — not a secret, but required for a real
+# sign-in to work. Sign-in requests fail cleanly with a 500 if unset rather
+# than accepting tokens meant for a different app.
+config :mazao_daktari, :google_client_id, System.get_env("GOOGLE_CLIENT_ID")
+
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
@@ -46,6 +53,18 @@ if config_env() == :prod do
       """
 
   host = System.get_env("PHX_HOST") || "example.com"
+
+  database_url =
+    System.get_env("DATABASE_URL") ||
+      raise """
+      environment variable DATABASE_URL is missing.
+      For example: ecto://USER:PASS@HOST/DATABASE
+      """
+
+  config :mazao_daktari, MazaoDaktari.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE", "10")),
+    socket_options: if(System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: [])
 
   config :mazao_daktari, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 

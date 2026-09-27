@@ -7,7 +7,12 @@ import Config
 config :cors_plug,
   origin: [
     "https://mazao-daktari.vercel.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    # frontend's docker-compose dev port (see root docker-compose.yml) -
+    # this file is what the local Docker backend actually compiles under
+    # too, since its Dockerfile sets MIX_ENV=prod (see that Dockerfile's
+    # header comment for the full reasoning)
+    "http://localhost:3333"
   ]
 
 # Force using SSL in production. This also sets the "strict-security-transport" header,

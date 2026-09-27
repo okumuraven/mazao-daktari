@@ -1,5 +1,15 @@
 import Config
 
+config :mazao_daktari, MazaoDaktari.Repo,
+  username: "mazao",
+  password: "mazao_dev_pw",
+  hostname: "localhost",
+  port: 5433,
+  database: "mazao_daktari_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 10
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

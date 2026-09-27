@@ -1,5 +1,14 @@
 import Config
 
+config :mazao_daktari, MazaoDaktari.Repo,
+  username: "mazao",
+  password: "mazao_dev_pw",
+  hostname: "localhost",
+  port: 5433,
+  database: "mazao_daktari_test#{System.get_env("MIX_TEST_PARTITION")}",
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: System.schedulers_online() * 2
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :mazao_daktari, MazaoDaktariWeb.Endpoint,

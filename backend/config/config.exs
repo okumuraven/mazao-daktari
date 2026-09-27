@@ -8,6 +8,7 @@
 import Config
 
 config :mazao_daktari,
+  ecto_repos: [MazaoDaktari.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configure the endpoint

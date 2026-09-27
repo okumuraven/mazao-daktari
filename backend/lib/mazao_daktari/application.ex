@@ -9,6 +9,7 @@ defmodule MazaoDaktari.Application do
   def start(_type, _args) do
     children = [
       MazaoDaktariWeb.Telemetry,
+      MazaoDaktari.Repo,
       {DNSCluster, query: Application.get_env(:mazao_daktari, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: MazaoDaktari.PubSub},
       MazaoDaktari.AI.KeyRing,

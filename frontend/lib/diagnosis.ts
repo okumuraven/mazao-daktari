@@ -28,6 +28,7 @@ export async function diagnoseCrop(
   description: string,
   photo: File | null,
   language: Language,
+  token: string | null,
 ): Promise<Diagnosis> {
   const form = new FormData();
   form.append("description", description);
@@ -36,6 +37,7 @@ export async function diagnoseCrop(
 
   const res = await fetch(`${API_BASE}/api/diagnose`, {
     method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: form,
   });
 

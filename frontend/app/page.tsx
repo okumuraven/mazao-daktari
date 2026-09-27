@@ -1,16 +1,31 @@
 "use client";
 
 import { useRef, useState } from "react";
+import {
+  Camera,
+  Stethoscope,
+  FlaskConical,
+  ShieldCheck,
+  AlertTriangle,
+  Loader2,
+  Sprout,
+  ImageUp,
+  X,
+} from "lucide-react";
 import { STRINGS, type Language } from "@/lib/strings";
 import { diagnoseCrop, type Diagnosis } from "@/lib/diagnosis";
+import { useAuth } from "@/lib/auth-context";
+import { AuthBar } from "@/components/AuthBar";
+import { History } from "@/components/History";
 
 const URGENCY_STYLES: Record<string, string> = {
-  low: "bg-green-100 text-green-800",
-  medium: "bg-amber-100 text-amber-800",
-  high: "bg-red-100 text-red-800",
+  low: "bg-low-bg text-low",
+  medium: "bg-medium-bg text-medium",
+  high: "bg-high-bg text-high",
 };
 
 export default function Home() {
+  const { token } = useAuth();
   const [lang, setLang] = useState<Language>("en");
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -19,6 +34,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Diagnosis | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const t = STRINGS[lang];
 
@@ -26,6 +42,12 @@ export default function Home() {
     const file = e.target.files?.[0] ?? null;
     setPhoto(file);
     setPreviewUrl(file ? URL.createObjectURL(file) : null);
+  }
+
+  function clearPhoto() {
+    setPhoto(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleSubmit() {
@@ -39,7 +61,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const diagnosis = await diagnoseCrop(description.trim(), photo, lang);
+      const diagnosis = await diagnoseCrop(description.trim(), photo, lang, token);
       setResult(diagnosis);
       requestAnimationFrame(() =>
         resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
@@ -51,113 +73,216 @@ export default function Home() {
     }
   }
 
-  const urgencyClass = result ? URGENCY_STYLES[result.urgency] ?? URGENCY_STYLES.low : "";
+  const urgencyClass = result ? (URGENCY_STYLES[result.urgency] ?? URGENCY_STYLES.low) : "";
 
   return (
-    <div className="min-h-screen bg-[#f6f8f4] text-[#1b2318] pb-8">
-      <header className="sticky top-0 z-10 bg-[#1e6b3c] text-white px-4 pt-4 pb-5">
-        <h1 className="text-lg font-bold">🌱 Mazao Daktari</h1>
-        <p className="text-sm opacity-90 mt-0.5">{t.tagline}</p>
-        <div className="flex gap-2 mt-3">
-          <button
-            type="button"
-            onClick={() => setLang("en")}
-            className={`flex-1 rounded-lg border border-white/50 py-2 text-sm ${
-              lang === "en" ? "bg-white text-[#14492a] font-semibold" : "text-white"
-            }`}
-          >
-            English
-          </button>
-          <button
-            type="button"
-            onClick={() => setLang("sw")}
-            className={`flex-1 rounded-lg border border-white/50 py-2 text-sm ${
-              lang === "sw" ? "bg-white text-[#14492a] font-semibold" : "text-white"
-            }`}
-          >
-            Kiswahili
-          </button>
+    <div className="min-h-dvh flex flex-col bg-bg">
+      {/* Nav */}
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur border-b border-border">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 font-heading font-semibold text-heading text-lg mr-auto">
+            <Sprout className="w-6 h-6 text-primary" aria-hidden="true" />
+            Mazao Daktari
+          </div>
+
+          <div className="flex rounded-full border border-border p-0.5 bg-bg text-sm">
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              className={`px-3 py-1.5 rounded-full font-medium transition-colors duration-200 cursor-pointer ${
+                lang === "en" ? "bg-primary text-white" : "text-body hover:text-heading"
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("sw")}
+              className={`px-3 py-1.5 rounded-full font-medium transition-colors duration-200 cursor-pointer ${
+                lang === "sw" ? "bg-primary text-white" : "text-body hover:text-heading"
+              }`}
+            >
+              SW
+            </button>
+          </div>
+
+          <AuthBar lang={lang} />
         </div>
       </header>
 
-      <main className="max-w-[480px] mx-auto px-4">
-        <div className="bg-white border border-[#dde5da] rounded-xl p-4 mt-4">
-          <label htmlFor="description" className="block text-sm font-semibold mb-1.5">
-            {t.labelDesc}
-          </label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder={t.placeholder}
-            className="w-full min-h-[4.5rem] p-2.5 rounded-lg border border-[#dde5da] text-[0.95rem] resize-y"
-          />
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-primary-dark to-primary text-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <h1 className="font-heading font-bold text-2xl sm:text-4xl leading-tight max-w-2xl">
+            {t.heroTitle}
+          </h1>
+          <p className="mt-2 sm:mt-3 text-white/90 max-w-xl text-sm sm:text-base">{t.heroSubtitle}</p>
 
-          <label htmlFor="photo" className="block text-sm font-semibold mt-3 mb-1.5">
-            {t.labelPhoto}
-          </label>
-          <input
-            id="photo"
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhotoChange}
-            className="block text-sm"
-          />
-          {previewUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={previewUrl}
-              alt="Selected crop"
-              className="mt-2.5 max-w-full rounded-lg"
-            />
-          )}
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full mt-3 py-3.5 rounded-xl bg-[#1e6b3c] text-white font-semibold disabled:opacity-60"
-          >
-            {loading ? t.submitting : t.submit}
-          </button>
-          <p className="text-xs text-[#5c6b5c] mt-1.5">{t.hint}</p>
-          {error && <p className="text-sm text-[#b3261e] mt-1.5">{error}</p>}
+          <div className="mt-6 hidden sm:flex gap-8 text-sm">
+            <Step icon={<Camera className="w-5 h-5" aria-hidden="true" />} label={t.stepPhoto} />
+            <Step icon={<Stethoscope className="w-5 h-5" aria-hidden="true" />} label={t.stepDiagnose} />
+            <Step icon={<FlaskConical className="w-5 h-5" aria-hidden="true" />} label={t.stepTreat} />
+          </div>
         </div>
+      </section>
 
-        {result && (
-          <div ref={resultRef} className="bg-white border border-[#dde5da] rounded-xl p-4 mt-4">
-            {result.mock && (
-              <div className="bg-amber-50 text-amber-800 border border-amber-200 rounded-lg px-3 py-2 text-[0.78rem] mb-3">
-                {t.mockNote}
+      <main className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section className="min-w-0">
+            <div className="bg-card border border-border rounded-2xl shadow-sm p-4 sm:p-6">
+              <label htmlFor="description" className="block text-sm font-semibold text-heading mb-1.5">
+                {t.labelDesc}
+              </label>
+              <textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t.placeholder}
+                className="w-full min-h-[5.5rem] p-3 rounded-xl border border-border text-[0.95rem] resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-shadow"
+              />
+
+              <span className="block text-sm font-semibold text-heading mt-4 mb-1.5">{t.labelPhoto}</span>
+
+              {!previewUrl ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-6 text-muted hover:border-primary hover:text-primary transition-colors duration-200 cursor-pointer"
+                >
+                  <ImageUp className="w-7 h-7" aria-hidden="true" />
+                  <span className="text-sm font-medium">{t.uploadPrompt}</span>
+                </button>
+              ) : (
+                <div className="relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewUrl}
+                    alt="Selected crop"
+                    className="max-w-full max-h-56 rounded-xl border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    aria-label={t.removePhoto}
+                    className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-heading text-white flex items-center justify-center shadow-sm cursor-pointer"
+                  >
+                    <X className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                id="photo"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoChange}
+                className="sr-only"
+              />
+
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full mt-5 min-h-12 py-3.5 rounded-xl bg-primary text-white font-heading font-semibold flex items-center justify-center gap-2 hover:bg-primary-dark active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100 transition-all duration-200 cursor-pointer"
+              >
+                {loading && <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />}
+                {loading ? t.submitting : t.submit}
+              </button>
+              <p className="text-xs text-muted mt-2">{t.hint}</p>
+              {error && <p className="text-sm text-high mt-2 font-medium">{error}</p>}
+            </div>
+
+            {result && (
+              <div
+                ref={resultRef}
+                className="bg-card border border-border rounded-2xl shadow-sm p-4 sm:p-6 mt-6 animate-[fadeIn_0.35s_ease-out]"
+              >
+                {result.mock && (
+                  <div className="bg-medium-bg text-medium border border-medium/30 rounded-lg px-3 py-2 text-[0.78rem] mb-4">
+                    {t.mockNote}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[0.72rem] font-semibold uppercase ${urgencyClass}`}
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
+                    {result.urgency} · {result.confidence}
+                  </span>
+                  <strong className="text-body">{result.crop}</strong>
+                </div>
+                <h2 className="font-heading text-xl font-semibold text-heading mb-2">{result.issue}</h2>
+
+                <Section title={t.tSymptoms} items={result.symptoms} icon={<Stethoscope className="w-4 h-4" aria-hidden="true" />} />
+                <Section title={t.tTreatment} items={result.treatment} icon={<FlaskConical className="w-4 h-4" aria-hidden="true" />} />
+                <Section title={t.tPrevention} items={result.prevention} icon={<ShieldCheck className="w-4 h-4" aria-hidden="true" />} />
               </div>
             )}
 
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2.5 py-1 rounded-full text-[0.72rem] font-semibold uppercase ${urgencyClass}`}>
-                {result.urgency} · {result.confidence}
-              </span>
-              <strong>{result.crop}</strong>
+            <div className="lg:hidden mt-6">
+              <History lang={lang} />
             </div>
-            <h2 className="text-lg font-semibold mb-1">{result.issue}</h2>
+          </section>
 
-            <Section title={t.tSymptoms} items={result.symptoms} />
-            <Section title={t.tTreatment} items={result.treatment} />
-            <Section title={t.tPrevention} items={result.prevention} />
-          </div>
-        )}
+          <aside className="hidden lg:block">
+            <div className="sticky top-20 space-y-4">
+              <div className="bg-card border border-border rounded-2xl shadow-sm p-5">
+                <h3 className="font-heading font-semibold text-heading text-sm mb-3">{t.howItWorks}</h3>
+                <ol className="space-y-3">
+                  <SidebarStep n={1} icon={<Camera className="w-4 h-4" aria-hidden="true" />} label={t.stepPhoto} />
+                  <SidebarStep n={2} icon={<Stethoscope className="w-4 h-4" aria-hidden="true" />} label={t.stepDiagnose} />
+                  <SidebarStep n={3} icon={<FlaskConical className="w-4 h-4" aria-hidden="true" />} label={t.stepTreat} />
+                </ol>
+              </div>
+
+              <History lang={lang} variant="card" />
+            </div>
+          </aside>
+        </div>
       </main>
+
+      <footer className="border-t border-border py-4 text-center text-xs text-muted">
+        {t.footer}
+      </footer>
     </div>
   );
 }
 
-function Section({ title, items }: { title: string; items: string[] }) {
+function Step({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function SidebarStep({ n, icon, label }: { n: number; icon: React.ReactNode; label: string }) {
+  return (
+    <li className="flex items-center gap-3 text-sm text-body">
+      <span className="w-7 h-7 shrink-0 rounded-full bg-low-bg text-primary flex items-center justify-center font-semibold text-xs">
+        {n}
+      </span>
+      <span className="flex items-center gap-1.5">
+        {icon}
+        {label}
+      </span>
+    </li>
+  );
+}
+
+function Section({ title, items, icon }: { title: string; items: string[]; icon: React.ReactNode }) {
   return (
     <>
-      <div className="text-xs font-bold uppercase text-[#5c6b5c] mt-3.5 mb-1">{title}</div>
+      <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-muted mt-4 mb-1.5">
+        {icon}
+        {title}
+      </div>
       <ul className="list-disc pl-5 space-y-1">
         {items.map((item, i) => (
-          <li key={i} className="text-[0.92rem]">
+          <li key={i} className="text-[0.92rem] text-body">
             {item}
           </li>
         ))}
