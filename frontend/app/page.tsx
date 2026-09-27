@@ -170,12 +170,15 @@ export default function Home() {
                   </button>
                 </div>
               )}
+              {/* No `capture` attribute: on mobile browsers that forces the
+                  camera to open directly, skipping the native picker's
+                  gallery/files option entirely. Omitting it lets the OS
+                  show its normal "Camera / Photo Library / Files" choice. */}
               <input
                 ref={fileInputRef}
                 id="photo"
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handlePhotoChange}
                 className="sr-only"
               />

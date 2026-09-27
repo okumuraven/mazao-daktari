@@ -26,9 +26,13 @@ primary_region = 'jnb'
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = 'off'
   auto_start_machines = true
-  min_machines_running = 0
+  # Keep at least one machine warm at all times - this is a hackathon demo
+  # backend, and a judge's first request hitting a cold-started machine
+  # (or, worse, timing out mid-cold-start) is a worse failure mode than the
+  # small idle cost of 1 always-on shared-cpu-1x machine.
+  min_machines_running = 1
   processes = ['app']
 
 [[vm]]
