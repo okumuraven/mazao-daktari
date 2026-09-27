@@ -22,6 +22,14 @@ primary_region = 'jnb'
   # (confirmed live: `getent hosts` via `fly ssh console` resolved it,
   # only the running app's own connection attempts failed).
   ECTO_IPV6 = 'true'
+  # The attached Postgres is a single 256MB shared-cpu-1x instance. With 2
+  # always-on app machines (see min_machines_running below) each holding a
+  # default Ecto pool of 10, that's 20 concurrent connections - confirmed
+  # live as the likely cause of a Postgres OOM/crash (connection refused on
+  # its own port, repmgrd unable to reconnect) shortly after this app was
+  # switched to always-on. 4 per machine (8 total) is comfortably within
+  # what a hackathon-scale demo needs.
+  POOL_SIZE = '4'
 
 [http_service]
   internal_port = 8080

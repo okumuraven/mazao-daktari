@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -14,21 +15,27 @@ export function AuthBar({ lang }: { lang: Language }) {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        {user.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={user.avatar_url}
-            alt=""
-            className="w-8 h-8 rounded-full border border-border"
-          />
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-low-bg text-primary flex items-center justify-center text-xs font-semibold">
-            {(user.name ?? user.email).charAt(0).toUpperCase()}
-          </div>
-        )}
-        <span className="hidden sm:inline text-sm text-body truncate max-w-32">
-          {user.name ?? user.email}
-        </span>
+        <Link
+          href="/profile"
+          className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity duration-200"
+          title={t.profile}
+        >
+          {user.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.avatar_url}
+              alt=""
+              className="w-8 h-8 rounded-full border border-border"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-low-bg text-primary flex items-center justify-center text-xs font-semibold">
+              {(user.name ?? user.email).charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span className="hidden sm:inline text-sm text-body truncate max-w-32">
+            {user.name ?? user.email}
+          </span>
+        </Link>
         <button
           type="button"
           onClick={signOut}

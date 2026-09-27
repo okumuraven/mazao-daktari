@@ -35,6 +35,12 @@ defmodule MazaoDaktariWeb.AuthController do
   end
 
   defp user_json(user) do
-    %{id: user.id, email: user.email, name: user.name, avatar_url: user.avatar_url}
+    %{
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar_url: user.avatar_url,
+      joined_at: user.inserted_at
+    }
   end
 end
